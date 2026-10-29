@@ -1,0 +1,70 @@
+name: Lapterv NATIV Windows 0.4
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'NATIV_LAPTERV_V04/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-windows:
+    name: Nativ Windows Forms EXE es sajat telepito
+    runs-on: windows-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: NATIV_LAPTERV_V04
+    steps:
+      - name: Forras letoltese
+        uses: actions/checkout@v4
+
+      - name: .NET 8 SDK telepitese
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Go telepitese a sajat telepitohoz
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+
+      - name: Ellenorzes a Windows forditoval
+        shell: pwsh
+        run: dotnet run --project tests/Lapterv.SmokeTests.csproj -c Release
+
+      - name: Nativ program forditasa
+        shell: pwsh
+        run: |
+          dotnet publish NativeApp/LaptervNative.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=false -o dist
+          if (-not (Test-Path 'dist/Lapterv.exe')) { throw 'Nem keszult el a nativ Lapterv.exe!' }
+
+      - name: Eltavolito es telepito forditasa
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path 'installer/assets' | Out-Null
+          Copy-Item 'dist/Lapterv.exe' 'installer/assets/Lapterv.exe' -Force
+          go build -C installer -trimpath -ldflags="-s -w -H=windowsgui" -o assets/Lapterv_Eltavolitas.exe ./uninstall
+          if ($LASTEXITCODE -ne 0) { throw 'Eltavolito forditasa nem sikerult' }
+          go build -C installer -trimpath -ldflags="-s -w -H=windowsgui" -o ../dist/Lapterv_Telepito_0.4.0_x64.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Telepito forditasa nem sikerult' }
+          Compress-Archive -Path 'dist/Lapterv.exe' -DestinationPath 'dist/Lapterv_Nativ_Portable_0.4.0.zip' -Force
+          Get-FileHash -Algorithm SHA256 'dist/Lapterv_Telepito_0.4.0_x64.exe' |
+            ForEach-Object { "$($_.Hash)  Lapterv_Telepito_0.4.0_x64.exe" } |
+            Set-Content -Encoding ascii 'dist/SHA256.txt'
+
+      - name: Windows telepito letoltheto csomag
+        uses: actions/upload-artifact@v4
+        with:
+          name: Lapterv-NATIV-Windows-0.4.0
+          path: |
+            NATIV_LAPTERV_V04/dist/Lapterv.exe
+            NATIV_LAPTERV_V04/dist/Lapterv_Telepito_0.4.0_x64.exe
+            NATIV_LAPTERV_V04/dist/Lapterv_Nativ_Portable_0.4.0.zip
+            NATIV_LAPTERV_V04/dist/SHA256.txt
+          if-no-files-found: error
+          retention-days: 30
