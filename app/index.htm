@@ -573,7 +573,7 @@
             x:final.x,y:final.y,w:entry.realW,h:entry.realH,
             realW:entry.realW,realH:entry.realH,part:entry.item,
             turned:entry.turned,section:final.id,stripIndex:strip.index,
-            completionStep:bin.cuts.length
+            completionStep:bin.cuts.length,finishCutIndex:bin.cuts.length-1
           });
           bin.used+=entry.item.a*entry.item.b;
         }
@@ -586,6 +586,74 @@
     return {bins:used,failed,items,usedArea:used.reduce((s,b)=>s+b.used,0),
       sheetArea:used.reduce((s,b)=>s+b.a*b.b,0),machineReady:true,feed};
   }
+  // === PRODUCTION_SEQUENCE_START ===
+  // Előbb MINDEN táblán sávozunk; visszaadás csak ezután történhet.
+  // Csak ellenőrző program - nem végrehajtható xPrg.
+  function buildProductionSequence(bins){
+    const events=[],crossJobs=[];let cutNumber=0;
+    const round=n=>Math.round(Number(n)*1000)/1000;
+    const stages=['cross-head-trim','cross-trim','cross','rip'];
+    const cutKey=c=>JSON.stringify([c.stage,c.axis,round(c.offset),round(c.pieceSize),
+      round(c.length),round(c.kerf),c.partSide,c.kind]);
+    const stripKey=job=>{
+      const {bin,strip,cuts}=job,m=bin.machine;
+      return JSON.stringify([bin.a,bin.b,bin.thickness,bin.trim,bin.name,m.feed,
+        round(strip.width),round(m.crossSize),
+        [...new Set(strip.items.map(p=>String(p.item.materialColor||'').trim().toLowerCase()))].sort(),
+        cuts.map(cutKey)]);
+    };
+    for(let boardIndex=0;boardIndex<bins.length;boardIndex++){
+      const bin=bins[boardIndex];
+      for(const cut of bin.cuts){delete cut.globalOrder;delete cut.stackCount;}
+      if(!bin.machine)continue;
+      for(const cut of bin.cuts.filter(c=>c.stage==='head-trim'||c.stage==='strip')){
+        cut.globalOrder=++cutNumber;cut.stackCount=1;
+        events.push({type:'cut',phase:'savozas',order:cutNumber,boardIndex:boardIndex+1,
+          stripIndex:cut.stripIndex,stage:cut.stage,stackCount:1,cut});
+      }
+      for(const strip of bin.machine.strips){
+        const cuts=bin.cuts.filter(c=>stages.includes(c.stage)&&c.stripIndex===strip.index);
+        crossJobs.push({boardIndex:boardIndex+1,bin,strip,cuts});
+      }
+    }
+    const used=new Set();let pairedGroups=0;
+    for(let i=0;i<crossJobs.length;i++){
+      if(used.has(i))continue;
+      const base=crossJobs[i],group=[base];used.add(i);
+      for(let j=i+1;j<crossJobs.length;j++){
+        if(!used.has(j)&&stripKey(base)===stripKey(crossJobs[j])){
+          group.push(crossJobs[j]);used.add(j);break;
+        }
+      }
+      if(group.length===2)pairedGroups++;
+      const refs=group.map(job=>({boardIndex:job.boardIndex,
+        stripIndex:job.strip.index,section:job.strip.section.id,
+        width:job.strip.width,length:job.bin.machine.crossSize,
+        thickness:job.bin.thickness}));
+      events.push({type:'refeed',phase:'hosszvagas',stackCount:group.length,
+        strips:refs,requiresStackValidation:group.length===2});
+      for(let k=0;k<base.cuts.length;k++){
+        const order=++cutNumber;
+        group.forEach(job=>{if(job.cuts[k]){
+          job.cuts[k].globalOrder=order;job.cuts[k].stackCount=group.length;
+        }});
+        events.push({type:'cut',phase:'hosszvagas',order,stage:base.cuts[k].stage,
+          stackCount:group.length,strips:refs,cuts:group.map(job=>job.cuts[k])});
+      }
+    }
+    for(const bin of bins){
+      if(!bin.machine)continue;
+      for(const p of bin.placements){
+        const last=bin.cuts[p.finishCutIndex];
+        if(last?.globalOrder)p.completionStep=last.globalOrder;
+      }
+    }
+    return {format:'lapterv-production-review-v2',machineExecutable:false,
+      phaseOrder:['savozas','hosszvagas'],maxStackCount:2,
+      stackRule:'Csak azonos anyagvastagságú, színű és teljesen azonos vágássorú csíkok. A gép engedélyezett rétegvastagságát külön ellenőrizni kell.',
+      cutCount:cutNumber,pairedGroups,events};
+  }
+  // === PRODUCTION_SEQUENCE_END ===
   function computeNesting(){
     const parts=getParts();
     if(state.layoutMode==='machine'&&Number(state.trim)>0&&Number(state.trim)<Number(state.kerf))
@@ -607,6 +675,7 @@
         trial.bins.length*1e7+cuts.length*1000+cuts.reduce((s,c)=>s+c.length,0)*.01;
       if(!best||score<best.score){best={...trial,score,cutAxis:axis};}
     }
+    if(machineMode&&best&&!best.error)best.production=buildProductionSequence(best.bins);
     return best;
   }
   const colors=['#dcebdd','#e4ece2','#d8e8de','#e9e8d7','#d8e4ea','#eadfda','#dde6d3','#e9e1ea'];
@@ -636,12 +705,13 @@
       return `<g><title>${h(desc)}</title><rect x="${x}" y="${y}" width="${a}" height="${b}" fill="${colors[i%colors.length]}" stroke="#4b6e5a" stroke-width="2"/><text x="${x+a/2}" y="${y+b/2-(canShow?fsize*.35:0)}" fill="#253c31" font-size="${fsize}" text-anchor="middle" font-weight="700">${h(r.part.name.length>Math.max(10,a/22)?r.part.name.slice(0,Math.max(7,Math.floor(a/22)))+'…':r.part.name)}</text>${canShow?`<text x="${x+a/2}" y="${y+b/2+fsize*1.05}" text-anchor="middle" fill="#3b5f4e" font-size="${Math.min(lineSize,fsize*.82)}">${nfmt(r.part.a)} × ${nfmt(r.part.b)} mm</text><path d="${grainPath}" fill="none" stroke="#779c86" stroke-width="3"/>`:''}</g>`;
     }).join('');
     const cutLines=bin.cuts.map((cut,i)=>{
+      const cutNumber=bin.machine?(cut.globalOrder||i+1):i+1;
       const start=point(cut.x1,cut.y1),end=point(cut.x2,cut.y2);
       const x=start.x,y=start.y,x2=end.x,y2=end.y,dx=x2-x,dy=y2-y;
-      if(i>0){
+      if(i>0||(bin.machine&&cutNumber!==1)){
         const lx=x+Math.sign(dx)*Math.min(33,Math.abs(dx)*.08);
         const ly=y+Math.sign(dy)*Math.min(33,Math.abs(dy)*.08);
-        return `<g><title>${i+1}. vágás · ${cut.axis.toUpperCase()} tengely · ${nfmt(cut.length)} mm</title><path d="M${x} ${y}L${x2} ${y2}" stroke="#bd805b" stroke-width="4" stroke-dasharray="16 10" fill="none"/><circle cx="${lx}" cy="${ly}" r="16" fill="#fff8ef" stroke="#b87c59" stroke-width="2"/><text x="${lx}" y="${ly+6}" font-family="Arial" font-size="17" font-weight="700" text-anchor="middle" fill="#915c3e">${i+1}</text></g>`;
+        return `<g><title>${cutNumber}. vágás · ${cut.axis.toUpperCase()} tengely · ${nfmt(cut.length)} mm</title><path d="M${x} ${y}L${x2} ${y2}" stroke="#bd805b" stroke-width="4" stroke-dasharray="16 10" fill="none"/><circle cx="${lx}" cy="${ly}" r="16" fill="#fff8ef" stroke="#b87c59" stroke-width="2"/><text x="${lx}" y="${ly+6}" font-family="Arial" font-size="17" font-weight="700" text-anchor="middle" fill="#915c3e">${cutNumber}</text></g>`;
       }
       if(rotated){
         // A Y irányú szabásvonal vízszintes lesz az elfordított lapon,
@@ -1007,8 +1077,14 @@
       note:'NEM xMix és NEM xPrg. Gépbe betölteni tilos. A vágások értelmezését az eredeti xPrg fájlokkal még igazolni kell.',
       project:String(getFurniture()?.name||state.projectName||'Lapterv'),boards:all,
       settings:{kerfMm:Number(state.kerf),trimMm:Number(state.trim),cutDirection:state.cutDirection,layoutMode:state.layoutMode}};
+    if(result.production){
+      files.push(['gyartasi_sorrend_ellenorzes.json',JSON.stringify(result.production,null,2)]);
+      manifest.productionSchedule='gyartasi_sorrend_ellenorzes.json';
+      manifest.phaseOrder=result.production.phaseOrder;
+      manifest.pairedStripGroups=result.production.pairedGroups;
+    }
     files.unshift(['manifest.json',JSON.stringify(manifest,null,2)]);
-    files.push(['OLVASSEL.txt','LAPTERV - GÉPI ELŐKÉSZÍTŐ CSOMAG\r\n\r\nEz NEM végrehajtható gépi program.\r\nNem tartalmaz xMix vagy xPrg fájlokat.\r\nA *.json állományokat kizárólag ellenőrzésre és a későbbi hiteles gépi export fejlesztéséhez használd.\r\nÉles gépi futtatás előtt igazolni kell a gép valódi xPrg parancsformátumát.\r\n']);
+    files.push(['OLVASSEL.txt','LAPTERV - GÉPI ELŐKÉSZÍTŐ CSOMAG\r\n\r\nEz NEM végrehajtható gépi program.\r\nNem tartalmaz xMix vagy xPrg fájlokat.\r\nA *.json állományokat kizárólag ellenőrzésre és a későbbi hiteles gépi export fejlesztéséhez használd.\r\nAz új gyartasi_sorrend_ellenorzes.json előbb minden tábla sávozását, csak utána a csíkok visszaadását és hosszvágását tartalmazza.\r\nAzonos teljes vágássor esetén két réteget javasolhat. Ezt tényleges gépen használni TILOS, amíg nincs ellenőrzött xPrg és gépi rétegvastagság!\r\nÉles gépi futtatás előtt igazolni kell a gép valódi xPrg parancsformátumát.\r\n']);
     downloadBlob(xlsxZip(files,'application/zip'),(fileName(manifest.project)||'lapterv')+'_gepi_elokeszites_NEM_gepi_program.zip');
   }
   function downloadCutList(format){
@@ -1094,8 +1170,9 @@
           completionStep:placement.completionStep??(index+1)});
       });
     });
-    labels.sort((a,b)=>a.boardIndex-b.boardIndex||
-      a.completionStep-b.completionStep||a.index-b.index);
+    labels.sort((a,b)=>(result.production?
+      a.completionStep-b.completionStep||a.boardIndex-b.boardIndex:
+      a.boardIndex-b.boardIndex||a.completionStep-b.completionStep)||a.index-b.index);
     return labels;
   }
   // Egyetlen SVG matricarajzot használunk előnézethez, A4 nyomtatáshoz és PNG-hez.
