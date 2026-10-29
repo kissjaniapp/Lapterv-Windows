@@ -2,15 +2,18 @@
 
 Ez a **GitHubra közvetlenül feltölthető forráscsomag**, amelyből a **GitHub Actions saját maga fordítja le** a Windows 64 bites telepítő `.exe` állományt. **Nem szabad csak a ZIP-et feltölteni** a repositoryba: előtte ki kell csomagolni, és a fájlokat/mappákat feltölteni.
 
-## 1. Feltöltés (GitHub weboldalon, programtelepítés nélkül)
+## 1. Feltöltés a már meglévő GitHub repositoryba
 
-1. Nyisd meg: https://github.com/new — jelentkezz be a GitHub-fiókoddal.
-2. Repository name: `Lapterv-Windows`. Választhatsz `Private` beállítást; a példaprojektet nem szükséges nyilvánossá tenni. Az induláskor ne kérj automatikusan `README`, `.gitignore` vagy licenc fájlt.
-3. Kattints a `Create repository` gombra.
-4. A számítógépeden **csomagold ki** a `Lapterv_GitHub_Feltoltheto_0.2.0.zip` ZIP-et. Nyisd meg a kibontott mappát, majd jelöld ki az **összes fájlt és almappát**, beleértve a `.github` mappát is.
-5. A GitHubon kattints az `uploading an existing file` hivatkozásra (vagy `Add file` → `Upload files`). **Húzd rá a kibontott tartalmat**, majd `Commit changes` a `main` ágra. Fontos: a `.github/workflows/lapterv-windows.yml` útvonal a repository **gyökerében** legyen, és ne egy `Lapterv_...` nevű plusz almappában.
-6. Nyisd meg az `Actions` fület, majd a **Lapterv - Windows telepito automatikus epites** munkafolyamatot. A `main` ágra történő feltöltés után automatikusan indul. Ha a GitHub jóváhagyást kér az Actions használatához, engedélyezd; később a `Run workflow` gombbal is futtathatod.
-7. A sikeres, **zöld pipás** futást megnyitva az `Artifacts` résznél töltsd le a `Lapterv-Windows-Telepito-0.2.0` nevű ZIP-et. Kicsomagolás után benne lesz a **`Lapterv_Telepito_0.2.0_x64.exe`** és a hordozható változat.
+A projekt előre el van rendezve az egyetlen `GITHUBRA_FELTOLTENDO` mappában.
+
+1. Nyisd meg a [saját Lapterv-Windows repositorydat](https://github.com/kissjaniapp/Lapterv-Windows).
+2. A **Code** lapon válaszd az **Add file → Upload files** menüt (üres repositorynál az **uploading an existing file** hivatkozást).
+3. A számítógépen nyisd meg a **GITHUBRA_FELTOLTENDO** mappát, nyomj **Ctrl+A**-t, majd a kijelölt fájlokat **és mappákat egyszerre** húzd a GitHub feltöltőterületére. **Egyetlen fájlt sem kell áthelyezni vagy egyesével feltölteni.**
+4. Ellenőrizd, hogy `.github/workflows/lapterv-windows.yml` formában szerepel a workflow a repository gyökerében.
+5. Kattints a **Commit changes** gombra a **main** ágon.
+6. A **GitHub Actions** fülön a fordítás automatikusan elindul. A zöld pipás futás **Artifacts** részéből töltheted le a Windows-telepítőt.
+
+**Ne a ZIP-fájlt töltsd fel:** a kibontott `GITHUBRA_FELTOLTENDO` mappa **tartalma** kerüljön a repository gyökerébe (ne egy újabb `GITHUBRA_FELTOLTENDO` almappába).
 
 ## 2. Mi épül?
 
