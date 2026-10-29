@@ -1,0 +1,9 @@
+# A GitHub maga forditja az EXE allomanyokat.
+/dist/
+/node_modules/
+*.log
+.DS_Store
+/desktop-go/assets/bin/*.exe
+/desktop-go/assets/app/index.htm
+/desktop-go/installer/assets/*.exe
+/desktop-go/installer/assets/index.htm

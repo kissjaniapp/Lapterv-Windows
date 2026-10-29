@@ -1,0 +1,22 @@
+LAPTERV - GITHUB FELTOLTES (ELSŐ WINDOWS PRÓBA)
+
+FONTOS: A ZIP fájlt ELŐBB CSOMAGOLD KI! Ne töltsd fel a ZIP-et változatlanul.
+
+1. Nyisd meg: https://github.com/new
+2. Új repository neve: Lapterv-Windows
+3. Create repository.
+4. Csomagold ki a mellékelt ZIP-et a számítógépeden.
+5. A kibontott mappa BELSEJÉBEN jelöld ki az összes fájlt és mappát (Ctrl+A).
+6. GitHubon: Add file > Upload files. Húzd rá a KIBONTOTT fájlokat/mappákat.
+7. Commit changes a main ágra.
+8. Actions > Lapterv - Windows telepito automatikus epites.
+9. Zöld pipás futás > Artifacts > Lapterv-Windows-Telepito-0.2.0.
+10. A letöltött ZIP-ben lesz a Lapterv_Telepito_0.2.0_x64.exe.
+
+HA NEM INDUL AUTOMATIKUSAN:
+Actions > Lapterv - Windows telepito automatikus epites > Run workflow.
+
+KULCSFONTOSSÁGÚ:
+A .github mappa a repository gyökerében legyen (ne egy további projektmappában).
+Ne hagyd ki a .github/workflows/lapterv-windows.yml fájlt.
+A gépi .xPrg parancsok jelenleg nincsenek hitelesítve: ez a program még NEM alkalmas közvetlen gépi vágás indítására.
