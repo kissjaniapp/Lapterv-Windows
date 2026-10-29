@@ -1,0 +1,11 @@
+EGYETLEN MAPPÁT KELL A GITHUBRA FELTÖLTENED: NATIV_LAPTERV_V05
+
+1. Ezt a ZIP-et csomagold ki.
+2. A NATIV_LAPTERV_V05 teljes mappáját húzd be:
+   https://github.com/kissjaniapp/Lapterv-Windows/upload/main
+3. Commit changes.
+4. https://github.com/kissjaniapp/Lapterv-Windows/actions
+5. Lapterv NATIV Windows 0.5 / Artifacts / Lapterv-NATIV-Windows-0.5.0
+
+Nem kell semmit áthelyezned; a .github/workflows/lapterv-native.yml már a GitHubon van.
+FIGYELEM: A .xPrg export gépi kompatibilitása még nem bizonyított!

@@ -1,0 +1,9 @@
+<xMix>
+	<Header Descrizione="Lapterv teszt" Import="" Date="29/10/2026" />
+	<Materials>
+		<Material Tipologia="BLAP003" Codice="BLAP003" Quantita="999" />
+	</Materials>
+	<RigheMix>
+		<RigaMix File=".\xPrg\Lapterv_CSAK_SZIMULATOR_1.xPrg" Rep="1" Pacco="1" CambioMateriale="0" />
+	</RigheMix>
+</xMix>

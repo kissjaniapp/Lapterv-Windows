@@ -1,0 +1,5 @@
+KÍSÉRLETI XPRG/XMIX – KIZÁRÓLAG OFFLINE SZIMULÁCIÓS ADATMINTA!
+NEM igazolt gépi program. NEM használható közvetlen élő gépi mozgatáshoz.
+A fájl 2800 × 2070 mm, 18 mm vastag, 5 mm kerf, 10 mm szélezés, 400 mm sáv és 2 × 700 mm hossz adatait mutatja.
+A BLAP003 anyagkód a felhasználói mintából származik, nem biztos hogy megfelel a te anyagodhoz.
+A tényleges vezérlés parancsszemantikája és az .xMix kompatibilitása nem igazolt.

@@ -1,0 +1,14 @@
+<SchemaDoc>
+	<Header NumFogliPacco="1.00" Descrizione="BLAP003" Spessore="18.00" Date="29/10/2026" Lunghezza="2800.00" Larghezza="2070.00" SpessoreLama="5.00" />
+	<Material Tipologia="" Codice="BLAP003" />
+	<Pattern>
+		<Cut T="P" Dim="2800.00" Rip="1" ID="0" />
+		<Cut T="RY" Dim="10.00" Rip="1" ID="1" />
+		<Cut T="Y" Dim="400.00" Rip="1" ID="2" />
+		<Cut T="RX" Dim="10.00" Rip="1" ID="3" />
+		<Cut T="X" Dim="700.00" Rip="1" ID="4" />
+		<Cut T="F" Dim="0.00" Rip="1" ID="5" />
+		<Cut T="X" Dim="700.00" Rip="1" ID="6" />
+		<Cut T="F" Dim="0.00" Rip="1" ID="7" />
+	</Pattern>
+</SchemaDoc>
