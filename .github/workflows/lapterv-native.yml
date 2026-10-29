@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'NATIV_LAPTERV_V05/**'
+      - 'build-sources/lapterv05.part*'
+      - '.github/workflows/lapterv-native.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   native-windows:
@@ -26,6 +28,44 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Teljes natív 0.5 forrás kibontása és ellenőrzése
+        shell: pwsh
+        working-directory: .
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $chunks = 1..6 | ForEach-Object { Join-Path $env:GITHUB_WORKSPACE ("build-sources/lapterv05.part{0:D2}" -f $_) }
+          foreach ($chunk in $chunks) { if (!(Test-Path $chunk)) { throw "Hiányzó forráscsomag: $chunk" } }
+          $encoded = ($chunks | ForEach-Object { (Get-Content $_ -Raw).Trim() }) -join ''
+          $bytes = [Convert]::FromBase64String($encoded)
+          $sha = [Convert]::ToHexString([System.Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()
+          if ($sha -ne '65334680685d787959b8a5a80289be53aa773b4985c318f5d24d2bd849a3f776') { throw "A forráscsomag sérült: $sha" }
+          $compressed = [System.IO.MemoryStream]::new($bytes)
+          $decoder = [System.IO.Compression.BrotliStream]::new($compressed, [System.IO.Compression.CompressionMode]::Decompress)
+          $tar = Join-Path $env:RUNNER_TEMP 'lapterv05.tar'
+          $output = [System.IO.File]::Create($tar)
+          try { $decoder.CopyTo($output) } finally { $output.Dispose(); $decoder.Dispose(); $compressed.Dispose() }
+          tar -xf $tar -C $env:GITHUB_WORKSPACE
+          if ($LASTEXITCODE -ne 0) { throw 'Forrás tar kibontása sikertelen' }
+          if (!(Test-Path 'NATIV_LAPTERV_V05/NativeApp/Planner.cs')) { throw 'Hiányzik az optimalizáló' }
+          if (!(Test-Path 'NATIV_LAPTERV_V05/NativeApp/XprgExporter.cs')) { throw 'Hiányzik az xPrg-generáló' }
+          Write-Host 'A teljes 0.5-os Windows-forrás sértetlenül kibontva.'
+
+      - name: Forrásfájlok láthatóvá tétele a GitHub repositoryban
+        continue-on-error: true
+        shell: pwsh
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add NATIV_LAPTERV_V05
+          git diff --cached --quiet
+          if ($LASTEXITCODE -eq 1) {
+            git commit -m "Publish expanded native Lapterv 0.5 source files [skip ci]"
+            if ($LASTEXITCODE -ne 0) { throw 'Forrás commit hiba' }
+            git push origin HEAD:main
+            if ($LASTEXITCODE -ne 0) { throw 'Forrás GitHub push hiba' }
+          }
 
       - name: Go telepitese a sajat telepitohoz
         uses: actions/setup-go@v5
